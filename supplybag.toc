@@ -1,7 +1,7 @@
 ## Interface: 11302
-## Title: wow-demo
-## Notes: viktor's demo
+## Title: Supply Bag
+## Notes: Supply Bag
 ## Version: 0.1
 ## Author: viktor
 
-wow-demo.lua
+main.lua
