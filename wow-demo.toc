@@ -1,0 +1,7 @@
+## Interface: 11302
+## Title: wow-demo
+## Notes: viktor's demo
+## Version: 0.1
+## Author: viktor
+
+wow-demo.lua
