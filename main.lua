@@ -14,7 +14,7 @@ function getMyBagsItems()
           itemLevel, itemMinLevel, itemType, itemSubType, itemStackCount,
           itemEquipLoc, itemTexture, vendorPrice = GetItemInfo(item)
   
-          print(itemName..':itemcount='..itemCount..', itemStackCount='..itemStackCount)
+          print(itemName..':itemcount='..itemCount..' , itemStackCount='..itemStackCount)
   
         end -- closing if item is not nil
       end -- closing the looping inside a bag
