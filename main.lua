@@ -53,6 +53,15 @@ function clone(org)
   return res
 end
 
+function getTableLen(tab)
+  local count=0
+  for k,v in pairs(tab) do
+      count = count + 1
+  end
+  return count
+end
+
+
 -- 获取当前包裹的物品清单
 function getMyBagsItems()
     local itemList = {}
@@ -119,6 +128,7 @@ end
 function load()
     print("load~~~~~~")
     local storeItems = clone(SAVE_TMP)
+    local storeItemsLen = getTableLen(storeItems)
     local storeDone = 0
     local bagItems = getMyBagsItems()
 
@@ -134,29 +144,31 @@ function load()
           itemEquipLoc, itemTexture, vendorPrice = GetItemInfo(item)
 
           local curStoreItem = storeItems[itemName]
-          if(curStoreItem && curStoreItem.itemCount>0) then
+          if(curStoreItem and curStoreItem.itemCount>0) then
             --如果store里有该物品，则保留背包里该物品，并减掉store里的数量
-            storeItems[itemName].itemCount = storeItems[itemName].itemCount - itemCount
-            elseif(curStoreItem && curStoreItem.itemCount<=0)
+            local count = storeItems[itemName].itemCount - itemCount
+            storeItems[itemName].itemCount = count
+            if (count<=0) then
               storeDone = storeDone+1
+            end
           else
             --store里没有该物品，存到银行
             --PickupContainerItem(bagTypes[bag],slot)
             --PickupContainerItem(bkTypes[bkBag],bkSlot)
           end
-        end -- closing if item is not nil
-      end -- closing the looping inside a bag
-    end -- closing the looping over all bags
+        end
+      end
+    end
 
     --如果都存在，就不从银行里取了
-    if (storeDone == table.getn(storeItems)) then
+    if (storeDone == storeItemsLen) then
       print('背包里面物品都有')
-      return false
+    else
+      --开始从银行里取出物品
+      printTable(storeItems)
+      print('need bank')
     end
-    
 
-    --开始从银行里取出物品
-    printTable(storeItems)
 end
 
 SLASH_NOTICE1="/supplybag"
