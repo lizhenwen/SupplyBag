@@ -123,14 +123,27 @@ function load()
 
     local needToBank = {} --需要存到银行的物品
     local needToBag = {} --需要从银行取出到背包的物品
-    -- we loop over the bag indexes
+    -- 把背包里面不是的存进银行
     for bag = 0, GS_PLAYER_BAG_COUNT - 1, 1 do
       for bagSlot = 1, GetContainerNumSlots(bag), 1 do
         local item = GetContainerItemLink(bag, bagSlot);
         local unusedTexture, itemCount = GetContainerItemInfo(bag, bagSlot);
 
         if (not (item == nil)) then 
-          local itemName, itemStackCount = GetItemInfo(item)
+          local itemName, itemLink, itemRarity,
+          itemLevel, itemMinLevel, itemType, itemSubType, itemStackCount,
+          itemEquipLoc, itemTexture, vendorPrice = GetItemInfo(item)
+
+          local curStoreItem = storeItems[itemName]
+          if(curStoreItem && curStoreItem.itemCount>0) then
+            --如果store里有该物品，则保留该物品，并减掉store里的数量
+            storeItems[itemName].itemCount = storeItems[itemName].itemCount - itemCount
+          else
+            --store里没有该物品，存到银行
+            --PickupContainerItem(bagTypes[bag],slot)
+            --PickupContainerItem(bkTypes[bkBag],bkSlot)
+          end
+
         end -- closing if item is not nil
 
       end -- closing the looping inside a bag
