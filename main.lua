@@ -119,6 +119,7 @@ end
 function load()
     print("load~~~~~~")
     local storeItems = clone(SAVE_TMP)
+    local storeDone = 0
     local bagItems = getMyBagsItems()
 
     -- 把背包里面不是的存进银行
@@ -136,6 +137,8 @@ function load()
           if(curStoreItem && curStoreItem.itemCount>0) then
             --如果store里有该物品，则保留背包里该物品，并减掉store里的数量
             storeItems[itemName].itemCount = storeItems[itemName].itemCount - itemCount
+            elseif(curStoreItem && curStoreItem.itemCount<=0)
+              storeDone = storeDone+1
           else
             --store里没有该物品，存到银行
             --PickupContainerItem(bagTypes[bag],slot)
@@ -144,6 +147,13 @@ function load()
         end -- closing if item is not nil
       end -- closing the looping inside a bag
     end -- closing the looping over all bags
+
+    --如果都存在，就不从银行里取了
+    if (storeDone == table.getn(storeItems)) then
+      print('背包里面物品都有')
+      return false
+    end
+    
 
     --开始从银行里取出物品
     printTable(storeItems)
