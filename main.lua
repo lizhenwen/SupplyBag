@@ -219,7 +219,8 @@ end
 
 SLASH_SUPPLYBAG1="/supplybag"
 SlashCmdList["SUPPLYBAG"]=function(cmd)
-    print("cmd:"..cmd)
+    local a,b,c=strfind(msg, "(%S+)")
+    print("cmd:"..cmd..',a='..a..',b='..b..',c='..c)
     if cmd == 'save' then
         save()
       elseif cmd == 'show' then
