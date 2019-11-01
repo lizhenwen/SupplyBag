@@ -1,8 +1,7 @@
 -- Number of bags a player has, think it's safe to hardcode it.
 local GS_PLAYER_BAG_COUNT = 5
-local SAVE_TMP
 
---//网摘,直接打印到屏幕
+--//直接打印table
 function printTable(t, n)
   if "table" ~= type(t) then
     return 0
@@ -214,7 +213,6 @@ function load(key)
     if (storeDone >= storeItemsLen) then --不用从银行取货了
       print('背包里面物品齐全，不需要补充')
     else  --开始从银行里取物品
-      print('need bank')
       -- 5 to 11 for bank bags (numbered left to right, was 5-10 prior to 2.0)
       -- -1是银行原始包，坑
       --https://wowwiki.fandom.com/wiki/BagId
@@ -256,7 +254,12 @@ function load(key)
       print('已经补充完毕')
     else
       print('还缺少东西没补充: ')
-      printTable(storeItems)
+
+      local listStr = ''
+      for k in pairs(storeItems) do
+        listStr = listStr..k..'\n'
+      end
+      print(listStr)
     end
 
 end
@@ -321,11 +324,9 @@ end
 SupplyBag:RegisterEvent"ADDON_LOADED"
 
 function SupplyBag:BANKFRAME_OPENED()
-  print('bank open')
 	SupplyBag.bankOpened = true
 end
 
 function SupplyBag:BANKFRAME_CLOSED()
-  print('bank close')
 	SupplyBag.bankOpened = false
 end
