@@ -89,7 +89,15 @@ function getMyBagsItems()
     return itemList
 end
 
-function save()
+function getConfig(name) 
+  return SupplyBagSavedVariablesPerCharacter.data[name]
+end
+function saveConfig(name,itemList) 
+  SupplyBagSavedVariablesPerCharacter.data = SupplyBagSavedVariablesPerCharacter.data or {}
+  SupplyBagSavedVariablesPerCharacter.data[name] = itemList
+end
+
+function save(name)
     print("save~~~~~~")
     local itemList = {}
     -- we loop over the bag indexes
@@ -117,15 +125,54 @@ function save()
       end -- closing the looping inside a bag
     end -- closing the looping over all bags
 
-    SAVE_TMP = itemList
+    saveConfig(name,itemList)
 end
 
-function show()
-    printTable(SAVE_TMP)
+function list()
+  local allList = SupplyBagSavedVariablesPerCharacter.data
+  if not allList then
+    print('没有配置')
+  else
+    local listStr = ''
+    for k in pairs(allList) do
+      listStr = listStr..k..'\n'
+    end
+    if string.len(listStr)<=0 then
+      print('没有配置')
+    else
+      print('目前已有以下配置: \n'..listStr)
+    end
+  end
 end
 
-function load()
-    local storeItems = clone(SAVE_TMP)
+function remove(key)
+  local allList = SupplyBagSavedVariablesPerCharacter.data
+  if not allList then
+    print('没有配置')
+  else
+    local curConfig = allList[key]
+    if not curConfig then
+      print('没有找到配置"'..key..'"')
+    else
+      allList[key] = nil
+      print('删除配置成功')
+    end
+  end
+end
+
+function load(key)
+    if not SupplyBag.bankOpened then
+      print('请打开银行进行补给')
+      return
+    end
+    
+    local storeConfig = getConfig(key)
+    if not storeConfig then
+      print('没有配置'..key)
+      return
+    end
+    
+    local storeItems = clone(storeConfig)
     local storeItemsLen = getTableLen(storeItems)
     local storeDone = 0
     local bagItems = getMyBagsItems()
@@ -217,12 +264,68 @@ end
 --BANKFRAME_OPENED
 
 SLASH_SUPPLYBAG1="/supplybag"
-SlashCmdList["SUPPLYBAG"]=function(cmd)
-    if cmd == 'save' then
-        save()
-      elseif cmd == 'show' then
-        show()
-      elseif cmd == 'load' then
-        load()
+SlashCmdList["SUPPLYBAG"]=function(msg)
+    local arr = {}
+    for w in string.gmatch(msg, "%S+") do
+      table.insert(arr,w)
     end
+    local cmd = arr[1]
+    local key = arr[2]
+
+    if cmd == 'save' then
+        if (not key) then
+          print('请输入要保存的名称')
+        else
+          save(key)
+        end
+      elseif cmd == 'list' then
+        list()
+      elseif cmd == 'load' then
+        if (not key) then
+          print('请输入要加载的配置名称')
+        else
+          load(key)
+        end
+      elseif cmd == 'remove' then
+        if (not key) then
+          print('请输入要删除的配置名称')
+        else
+          remove(key)
+        end
+    end
+end
+
+SupplyBag = CreateFrame"Frame"
+SupplyBag:SetScript("OnEvent", function(self, event, ...) self[event](self,event,...) end)
+local version = GetAddOnMetadata("SupplyBag", "Version") or "alpha"
+SupplyBag.version = version
+
+function SupplyBag:ADDON_LOADED(event, addon)
+	if addon ~= 'SupplyBag' then return end
+	self:UnregisterEvent("ADDON_LOADED")
+	self.ADDON_LOADED = nil
+	
+	SupplyBagSavedVariablesPerCharacter = SupplyBagSavedVariablesPerCharacter or {}
+	
+	local oldver = SupplyBagSavedVariablesPerCharacter.version
+	if oldver ~= version then
+		SupplyBagSavedVariablesPerCharacter.version = version
+	end
+	
+	print(format('SupplyBag %s loaded!', version))
+	
+	SupplyBag:RegisterEvent"BANKFRAME_OPENED"
+	SupplyBag:RegisterEvent"BANKFRAME_CLOSED"
+	
+end
+SupplyBag:RegisterEvent"ADDON_LOADED"
+
+function SupplyBag:BANKFRAME_OPENED()
+  print('bank open')
+	SupplyBag.bankOpened = true
+end
+
+function SupplyBag:BANKFRAME_CLOSED()
+  print('bank close')
+	SupplyBag.bankOpened = false
 end
