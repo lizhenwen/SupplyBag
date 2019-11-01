@@ -160,11 +160,9 @@ function load()
       end
     end
 
-    --如果都存在，就不从银行里取了
-    if (storeDone == storeItemsLen) then
+    if (storeDone == storeItemsLen) then --不用从银行取货了
       print('背包里面物品都有')
-    else
-      --开始从银行里取出物品
+    else  --开始从银行里取物品
       printTable(storeItems)
       print('need bank')
     end
