@@ -121,12 +121,10 @@ function save()
 end
 
 function show()
-    print("show~~~~~~")
     printTable(SAVE_TMP)
 end
 
 function load()
-    print("load~~~~~~")
     local storeItems = clone(SAVE_TMP)
     local storeItemsLen = getTableLen(storeItems)
     local storeDone = 0
@@ -152,6 +150,7 @@ function load()
             storeItems[itemName].itemCount = count
             if (count<=0) then
               storeDone = storeDone+1
+              storeItems[itemName] = nil
             end
           else
             --store里没有该物品，存到银行
@@ -168,39 +167,39 @@ function load()
     if (storeDone >= storeItemsLen) then --不用从银行取货了
       print('背包里面物品齐全，不需要补充')
     else  --开始从银行里取物品
-      printTable(storeItems)
       print('need bank')
-      --5 to 11 for bank bags (numbered left to right, was 5-10 prior to 2.0)
+      -- 5 to 11 for bank bags (numbered left to right, was 5-10 prior to 2.0)
+      -- -1是银行原始包，坑
       --https://wowwiki.fandom.com/wiki/BagId
-      for bankBag = NUM_BAG_SLOTS+1, NUM_BAG_SLOTS+NUM_BANKBAGSLOTS do
-        for bankBagSlot = 1, GetContainerNumSlots(bankBag), 1 do
-          local item = GetContainerItemLink(bankBag, bankBagSlot)
-          local unusedTexture, itemCount = GetContainerItemInfo(bankBag, bankBagSlot)
-  
-          if (not (item == nil)) then 
-            local itemName, itemLink, itemRarity,
-            itemLevel, itemMinLevel, itemType, itemSubType, itemStackCount,
-            itemEquipLoc, itemTexture, vendorPrice = GetItemInfo(item)
-            
-            local storeItem = storeItems[itemName]
-            if (storeItem and storeItem.itemCount>0) then --需要放到背包
-              print('bank item:'..itemName..'x'..itemCount..', need pick up to bag.')
-              -- 放到背包，待补充代码
-              --PickupContainerItem、UseContainerItem
-              PickupContainerItem(bankBag, bankBagSlot)
-              local emptySlot = bagEmptySlot[0]
-              table.remove(bagEmptySlot,0)
-              PickupContainerItem(emptySlot[0], emptySlot[1])
+      for bankBag = -1, NUM_BAG_SLOTS+NUM_BANKBAGSLOTS do
+        if (bankBag >= 0 and bankBag<NUM_BAG_SLOTS+1) then
+          --不是银行背包，不作处理，lua没有continue，先这么着
+        else
+          for bankBagSlot = 1, GetContainerNumSlots(bankBag), 1 do
+            local item = GetContainerItemLink(bankBag, bankBagSlot)
+            local unusedTexture, itemCount = GetContainerItemInfo(bankBag, bankBagSlot)
+    
+            if (not (item == nil)) then 
+              local itemName, itemLink, itemRarity,
+              itemLevel, itemMinLevel, itemType, itemSubType, itemStackCount,
+              itemEquipLoc, itemTexture, vendorPrice = GetItemInfo(item)
+              
+              local storeItem = storeItems[itemName]
+              if (storeItem and storeItem.itemCount>0) then --需要放到背包
+                -- 放到背包
+                PickupContainerItem(bankBag, bankBagSlot)
+                local emptySlot = bagEmptySlot[1]
+                PickupContainerItem(emptySlot[1], emptySlot[2])
+                table.remove(bagEmptySlot,1)
 
-              local count = storeItem.itemCount - itemCount
-              storeItem.itemCount = count
-              if (count<=0) then
-                storeDone = storeDone+1
+                local count = storeItem.itemCount - itemCount
+                storeItem.itemCount = count
+                if (count<=0) then --如果这个物品都拿完了，就记个数，后面校验是否有缺的物品
+                  storeDone = storeDone+1
+                end
               end
-            else
-              print('bank item:'..itemName..'x'..itemCount)
+              
             end
-            
           end
         end
       end
@@ -219,8 +218,6 @@ end
 
 SLASH_SUPPLYBAG1="/supplybag"
 SlashCmdList["SUPPLYBAG"]=function(cmd)
-    local a,b,c=strfind(msg, "(%S+)")
-    print("cmd:"..cmd..',a='..a..',b='..b..',c='..c)
     if cmd == 'save' then
         save()
       elseif cmd == 'show' then
