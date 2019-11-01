@@ -217,8 +217,8 @@ end
 
 --BANKFRAME_OPENED
 
-SLASH_NOTICE1="/supplybag"
-SlashCmdList["NOTICE"]=function(cmd)
+SLASH_SUPPLYBAG1="/supplybag"
+SlashCmdList["SUPPLYBAG"]=function(cmd)
     print("cmd:"..cmd)
     if cmd == 'save' then
         save()
