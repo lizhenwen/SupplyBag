@@ -34,6 +34,20 @@ function printTable(t, n)
   print(str_space.."}")
 end
 
+function msgInfo(msg)
+  local str = '|cFFFFFF00SupplyBag|r '..msg
+  print(str)
+end
+function msgWarn(msg)
+  local str = '|CFFFF8000SupplyBag '..msg..' |r'
+  print(str)
+end
+function msgError(msg)
+  local str = '\124cFFFF0000SupplyBag Error!!:|r '..msg
+  print(str)
+end
+
+
 --复制table
 function clone(org)
   local function copy(org, res)
@@ -97,7 +111,6 @@ function saveConfig(name,itemList)
 end
 
 function save(name)
-    print("save~~~~~~")
     local itemList = {}
     -- we loop over the bag indexes
     for bag = 0, GS_PLAYER_BAG_COUNT - 1, 1 do
@@ -113,7 +126,8 @@ function save(name)
           curItemInfo['itemName'] = itemName
           curItemInfo['itemCount'] = itemCount
           curItemInfo['itemStackCount'] = itemStackCount
-
+          
+          -- 还需要增加判断，魔法物品不用存储
           if(itemList[itemName]) then --重复的物品，增加计数
             itemList[itemName]['itemCount'] = itemList[itemName]['itemCount'] + itemCount
           else
@@ -125,21 +139,22 @@ function save(name)
     end -- closing the looping over all bags
 
     saveConfig(name,itemList)
+    msgInfo("保存配置 "..name.." 成功")
 end
 
 function list()
   local allList = SupplyBagSavedVariablesPerCharacter.data
   if not allList then
-    print('没有配置')
+    msgInfo('没有配置')
   else
     local listStr = ''
     for k in pairs(allList) do
       listStr = listStr..k..'\n'
     end
     if string.len(listStr)<=0 then
-      print('没有配置')
+      msgInfo('没有配置')
     else
-      print('目前已有以下配置: \n'..listStr)
+      msgInfo('目前已有以下配置: \n'..listStr)
     end
   end
 end
@@ -147,27 +162,28 @@ end
 function remove(key)
   local allList = SupplyBagSavedVariablesPerCharacter.data
   if not allList then
-    print('没有配置')
+    msgInfo('没有配置')
   else
     local curConfig = allList[key]
     if not curConfig then
-      print('没有找到配置"'..key..'"')
+      msgInfo('没有找到配置"'..key..'"')
     else
       allList[key] = nil
-      print('删除配置成功')
+      msgInfo('删除配置成功')
     end
   end
 end
 
-function load(key)
+--needMoveToBank: 如果true，则把背包里其他物品存到银行
+function load(key, needMoveToBank)
     if not SupplyBag.bankOpened then
-      print('请打开银行进行补给')
+      msgInfo('请打开银行进行补给')
       return
     end
     
     local storeConfig = getConfig(key)
     if not storeConfig then
-      print('没有配置'..key)
+      msgInfo('没有配置'..key)
       return
     end
     
@@ -176,8 +192,10 @@ function load(key)
     local storeDone = 0
     local bagItems = getMyBagsItems()
 
-    local bagEmptySlot = {}
+    local bagEmptySlot = {} --空的背包slot
+    local bankEmptySlot = {} -- 空的银行slot
 
+    local needPickToBanksItems = {} -- 需要放到银行的物品
     -- 把背包里面不是的存进银行
     for bag = 0, NUM_BAG_SLOTS do
       for bagSlot = 1, GetContainerNumSlots(bag), 1 do
@@ -200,8 +218,7 @@ function load(key)
             end
           else
             --store里没有该物品，存到银行
-            --PickupContainerItem(bagTypes[bag],slot)
-            --PickupContainerItem(bkTypes[bkBag],bkSlot)
+            table.insert(needPickToBanksItems,{bag, bagSlot})
           end
         else --空背包先存着，后面取物品需要
           local emptySlot = {bag,bagSlot}
@@ -210,56 +227,77 @@ function load(key)
       end
     end
 
-    if (storeDone >= storeItemsLen) then --不用从银行取货了
-      print('背包里面物品齐全，不需要补充')
-    else  --开始从银行里取物品
-      -- 5 to 11 for bank bags (numbered left to right, was 5-10 prior to 2.0)
-      -- -1是银行原始包，坑
-      --https://wowwiki.fandom.com/wiki/BagId
-      for bankBag = -1, NUM_BAG_SLOTS+NUM_BANKBAGSLOTS do
-        if (bankBag >= 0 and bankBag<NUM_BAG_SLOTS+1) then
-          --不是银行背包，不作处理，lua没有continue，先这么着
-        else
-          for bankBagSlot = 1, GetContainerNumSlots(bankBag), 1 do
-            local item = GetContainerItemLink(bankBag, bankBagSlot)
-            local unusedTexture, itemCount = GetContainerItemInfo(bankBag, bankBagSlot)
-    
-            if (not (item == nil)) then 
-              local itemName, itemLink, itemRarity,
-              itemLevel, itemMinLevel, itemType, itemSubType, itemStackCount,
-              itemEquipLoc, itemTexture, vendorPrice = GetItemInfo(item)
+    --开始从银行里取物品
+    -- 5 to 11 for bank bags (numbered left to right, was 5-10 prior to 2.0)
+    -- -1是银行原始包，坑
+    --https://wowwiki.fandom.com/wiki/BagId
+    for bankBag = -1, NUM_BAG_SLOTS+NUM_BANKBAGSLOTS do
+      if (bankBag >= 0 and bankBag<NUM_BAG_SLOTS+1) then
+        --不是银行背包，不作处理，lua没有continue，先这么着
+      else
+        for bankBagSlot = 1, GetContainerNumSlots(bankBag), 1 do
+          local item = GetContainerItemLink(bankBag, bankBagSlot)
+          local unusedTexture, itemCount = GetContainerItemInfo(bankBag, bankBagSlot)
+  
+          if (not (item == nil)) then 
+            local itemName, itemLink, itemRarity,
+            itemLevel, itemMinLevel, itemType, itemSubType, itemStackCount,
+            itemEquipLoc, itemTexture, vendorPrice = GetItemInfo(item)
+            
+            local storeItem = storeItems[itemName]
+            if (storeItem and storeItem.itemCount>0) then --需要放到背包
+              -- 放到背包
+              PickupContainerItem(bankBag, bankBagSlot)
+              local emptySlot = bagEmptySlot[1]
+              PickupContainerItem(emptySlot[1], emptySlot[2])
+              table.remove(bagEmptySlot,1)
               
-              local storeItem = storeItems[itemName]
-              if (storeItem and storeItem.itemCount>0) then --需要放到背包
-                -- 放到背包
-                PickupContainerItem(bankBag, bankBagSlot)
-                local emptySlot = bagEmptySlot[1]
-                PickupContainerItem(emptySlot[1], emptySlot[2])
-                table.remove(bagEmptySlot,1)
+              local slot = {bankBag, bankBagSlot}
+              --table.insert(bankEmptySlot,slot) -- 标记为空的slot--这种空的还不能标记，东西放不进去
 
-                local count = storeItem.itemCount - itemCount
-                storeItem.itemCount = count
-                if (count<=0) then --如果这个物品都拿完了，就记个数，后面校验是否有缺的物品
-                  storeDone = storeDone+1
-                end
+              local count = storeItem.itemCount - itemCount
+              storeItem.itemCount = count
+              if (count<=0) then --如果这个物品都拿完了，就记个数，后面校验是否有缺的物品
+                storeItems[itemName] = nil
+                storeDone = storeDone+1
               end
-              
             end
+          else
+            local slot = {bankBag, bankBagSlot}
+            table.insert(bankEmptySlot,slot)
           end
         end
       end
     end
 
-    if (storeDone >= storeItemsLen) then --不用从银行取货了
-      print('已经补充完毕')
-    else
-      print('还缺少东西没补充: ')
-
-      local listStr = ''
-      for k in pairs(storeItems) do
-        listStr = listStr..k..'\n'
+    --把背包里多余的东西移到银行
+    if (needMoveToBank) then
+      while #needPickToBanksItems>0 do
+        if #bankEmptySlot>0 then
+          local bagsItem = needPickToBanksItems[1]
+          local bankSlot = bankEmptySlot[1]
+          
+          PickupContainerItem(bagsItem[1], bagsItem[2])
+          PickupContainerItem(bankSlot[1], bankSlot[2])
+  
+          table.remove(needPickToBanksItems,1)
+          table.remove(bankEmptySlot,1)
+        else
+          msgInfo('银行满了')
+          break
+        end
       end
-      print(listStr)
+      
+    end
+    
+    if (storeDone >= storeItemsLen) then --不用从银行取货了
+      msgInfo('已经补充完毕')
+    else
+      local listStr = ''
+      for k,v in pairs(storeItems) do
+        listStr = listStr..k..'x'..v.itemCount..', '
+      end
+      msgInfo('还缺少东西没补充: \n'..listStr)
     end
 
 end
@@ -267,6 +305,7 @@ end
 --BANKFRAME_OPENED
 
 SLASH_SUPPLYBAG1="/supplybag"
+SLASH_SUPPLYBAG2="/spl"
 SlashCmdList["SUPPLYBAG"]=function(msg)
     local arr = {}
     for w in string.gmatch(msg, "%S+") do
@@ -277,7 +316,7 @@ SlashCmdList["SUPPLYBAG"]=function(msg)
 
     if cmd == 'save' then
         if (not key) then
-          print('请输入要保存的名称')
+          msgInfo('请输入要保存的名称')
         else
           save(key)
         end
@@ -285,13 +324,19 @@ SlashCmdList["SUPPLYBAG"]=function(msg)
         list()
       elseif cmd == 'load' then
         if (not key) then
-          print('请输入要加载的配置名称')
+          msgInfo('请输入要加载的配置名称')
         else
           load(key)
         end
+      elseif cmd == 'loadas' then
+        if (not key) then
+          msgInfo('请输入要加载的配置名称')
+        else
+          load(key,true)
+        end
       elseif cmd == 'remove' then
         if (not key) then
-          print('请输入要删除的配置名称')
+          msgInfo('请输入要删除的配置名称')
         else
           remove(key)
         end
@@ -315,7 +360,7 @@ function SupplyBag:ADDON_LOADED(event, addon)
 		SupplyBagSavedVariablesPerCharacter.version = version
 	end
 	
-	print(format('SupplyBag %s loaded!', version))
+  msgInfo(format('%s loaded!', version))
 	
 	SupplyBag:RegisterEvent"BANKFRAME_OPENED"
 	SupplyBag:RegisterEvent"BANKFRAME_CLOSED"
