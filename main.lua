@@ -432,17 +432,32 @@ function initButton(needRefresh)
   if not allList then
     --msgInfo('没有配置')
   else
+    --根据用户配置生成按钮
     for k in pairs(allList) do
       local button = CreateFrame("Button", k, SPL_BUTTON_Frame, "UIPanelButtonTemplate")
-      --button:SetName('MyName_'..k) -- width, height
+      button:EnableMouse(true)
       button:SetSize(30 ,22) -- width, height
       button:SetPoint("LEFT", SPL_BUTTON_Frame, "LEFT", buttonSN*28, 0)
       button:SetText(buttonSN+1)
       button:SetPoint("CENTER")
-      button:SetScript("OnClick", function(self)
+      button:SetScript("OnMouseDown", function(self, button)
         local name = self:GetName()
-        load(name,true)
+        if button == 'LeftButton' then --左键，加载配置，并清理背包
+          load(name,true)
+        elseif(button == 'RightButton') --右键，只加载配置，不清理背包
+          load(name)
+        end
       end)
+      --按钮提示语
+      button:SetScript('OnEnter',function(self)
+        GameTooltip_SetDefaultAnchor( GameTooltip, UIParent )
+        GameTooltip:SetText( self:GetName() ..'\n左键点击加载并清理背包，右键点击加载配置，ctrl+左键点击删除配置')
+        GameTooltip:Show()
+      end)
+      button:SetScript('OnLeave',function(self)
+        GameTooltip:Hide()
+      end)
+
       buttonSN = buttonSN+1
     end
   end
@@ -454,6 +469,14 @@ function initButton(needRefresh)
   buttonAdd:SetPoint("CENTER")
   buttonAdd:SetScript("OnClick", function(self)
     print('add button')
+  end)
+  buttonAdd:SetScript('OnEnter',function(self)
+    GameTooltip_SetDefaultAnchor( GameTooltip, UIParent )
+    GameTooltip:SetText( '新增配置' )
+    GameTooltip:Show()
+  end)
+  buttonAdd:SetScript('OnLeave',function(self)
+    GameTooltip:Hide()
   end)
 
 end
