@@ -1,5 +1,6 @@
 -- Number of bags a player has, think it's safe to hardcode it.
 local GS_PLAYER_BAG_COUNT = 5
+local SPL_BUTTON_Frame = CreateFrame("Frame", nil, UIParent)
 
 --//直接打印table
 function printTable(t, n)
@@ -140,6 +141,7 @@ function save(name)
 
     saveConfig(name,itemList)
     msgInfo("保存配置 "..name.." 成功")
+    initButton(true) -- 重载按钮
 end
 
 function list()
@@ -172,6 +174,7 @@ function remove(key)
       msgInfo('删除配置成功')
     end
   end
+  initButton(true)
 end
 
 --needMoveToBank: 如果true，则把背包里其他物品存到银行
@@ -340,6 +343,9 @@ SlashCmdList["SUPPLYBAG"]=function(msg)
         else
           remove(key)
         end
+      else
+        --指令不对
+        msgInfo('\n /spl save NAME \n /spl load NAME\n /spl remove NAME\n /spl list')
     end
 end
 
@@ -364,14 +370,90 @@ function SupplyBag:ADDON_LOADED(event, addon)
 	
 	SupplyBag:RegisterEvent"BANKFRAME_OPENED"
 	SupplyBag:RegisterEvent"BANKFRAME_CLOSED"
-	
+  
+  initButton()
 end
 SupplyBag:RegisterEvent"ADDON_LOADED"
 
 function SupplyBag:BANKFRAME_OPENED()
-	SupplyBag.bankOpened = true
+  SupplyBag.bankOpened = true
+  showButton()
 end
 
 function SupplyBag:BANKFRAME_CLOSED()
 	SupplyBag.bankOpened = false
+  hideButton()
+end
+
+function showButton()
+  print('show button')
+  SPL_BUTTON_Frame:Show()
+end
+function hideButton()
+  print('hide button')
+  SPL_BUTTON_Frame:Hide()
+end
+function initButton(needRefresh) 
+  --移除旧框架
+  if (needRefresh and SPL_BUTTON_Frame) then
+    SPL_BUTTON_Frame:Hide()
+    SPL_BUTTON_Frame:SetParent(nil)
+    SPL_BUTTON_Frame:UnregisterAllEvents()
+    SPL_BUTTON_Frame:SetID(0)
+    SPL_BUTTON_Frame:ClearAllPoints()
+  end
+  
+  --主框体
+  SPL_BUTTON_Frame = CreateFrame("Frame", nil, UIParent)
+  SPL_BUTTON_Frame:SetWidth(1) -- 设置宽度
+  SPL_BUTTON_Frame:SetHeight(1) -- 设置高度
+  SPL_BUTTON_Frame:SetBackdropColor(0, 0, 0, 0.6) -- 背景材质颜色 (Red, Green, Black, Alpha) 各参数的范围都是 0-1
+  SPL_BUTTON_Frame:SetBackdropBorderColor(0, 0, 0, 1)  -- 边框材质颜色 (Red, Green, Black, Alpha) 各参数的范围都是 0-1
+  SPL_BUTTON_Frame:SetPoint("TOPLEFT", BankFrame, "BOTTOMLEFT", 10, 0)
+  SPL_BUTTON_Frame:SetBackdrop({
+    bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+    tile = true,
+    tileSize = 2,
+    edgeSize = 2,
+    insets = { left = 1, right = 1, top = 1, bottom = 1 }
+  })
+  
+  if not SupplyBag.bankOpened then --银行打开时才显示
+    hideButton()
+  else
+    showButton()
+  end
+  
+  
+  
+  local allList = SupplyBagSavedVariablesPerCharacter.data
+  local buttonSN = 0
+  if not allList then
+    --msgInfo('没有配置')
+  else
+    for k in pairs(allList) do
+      local button = CreateFrame("Button", k, SPL_BUTTON_Frame, "UIPanelButtonTemplate")
+      --button:SetName('MyName_'..k) -- width, height
+      button:SetSize(30 ,22) -- width, height
+      button:SetPoint("LEFT", SPL_BUTTON_Frame, "LEFT", buttonSN*28, 0)
+      button:SetText(buttonSN+1)
+      button:SetPoint("CENTER")
+      button:SetScript("OnClick", function(self)
+        local name = self:GetName()
+        load(name,true)
+      end)
+      buttonSN = buttonSN+1
+    end
+  end
+  -- 新增按钮
+  local buttonAdd = CreateFrame("Button", 'SPL_BTN_ADD', SPL_BUTTON_Frame, "UIPanelButtonTemplate")
+  buttonAdd:SetSize(30 ,22)
+  buttonAdd:SetPoint("LEFT", SPL_BUTTON_Frame, "LEFT", buttonSN*28, 0)
+  buttonAdd:SetText('+')
+  buttonAdd:SetPoint("CENTER")
+  buttonAdd:SetScript("OnClick", function(self)
+    print('add button')
+  end)
+
 end
