@@ -1,7 +1,98 @@
 -- Number of bags a player has, think it's safe to hardcode it.
 local GS_PLAYER_BAG_COUNT = 5
 local SPL_BUTTON_Frame = CreateFrame("Frame", nil, UIParent)
+local Dialog = LibStub("LibDialog-1.0")
 
+local function verifyName(name)
+	if not name or name == "" then
+		return false
+	end
+	return true
+end
+Dialog:Register("SPL_ADD_BOX", {
+  text = 'SupplyBag - 新增背包配置',
+  show_while_dead = true,
+  is_exclusive = true,
+
+  editboxes = {
+    {
+      label = '配置名称',
+      on_enter_pressed = function(self)
+        --和确定按钮一样的操作
+        local name = self:GetParent().editboxes[1]:GetText()
+        if not verifyName(name) then
+          return
+        end
+        save(name)
+        Dialog:Dismiss("SPL_ADD_BOX")
+      end,
+      on_escape_pressed = function(self)
+        Dialog:Dismiss("SPL_ADD_BOX")
+      end,
+      on_text_changed = function(self)
+        local name = self:GetParent().editboxes[1]:GetText()
+        if verifyName(name) then
+          self:GetParent().buttons[1]:Enable()
+        else
+          self:GetParent().buttons[1]:Disable()
+        end
+      end,
+      auto_focus = true,
+      maxLetters = 100,
+    },
+  },
+  buttons = {
+    {
+      text = ACCEPT,
+      on_click = function(self)
+        local name = self.editboxes[1]:GetText()
+        if not verifyName(name) then
+          return
+        end
+        save(name)
+        Dialog:Dismiss("SPL_ADD_BOX")
+      end,
+    },
+    {
+      text = CANCEL,
+      on_click = function(self)
+        Dialog:Dismiss("SPL_ADD_BOX")
+      end,
+    },
+  },
+  on_show = function(self)
+    local name = self.editboxes[1]:GetText()
+    if verifyName( name) then
+      self.buttons[1]:Enable()
+    else
+      self.buttons[1]:Disable()
+    end
+  end
+})
+
+Dialog:Register("SPL_REMOVE_BOX", {
+  text = 'SupplyBag - 删除该背包配置 ',
+  show_while_dead = true,
+  is_exclusive = true,
+  buttons = {
+    {
+      text = ACCEPT,
+      on_click = function(self)
+        remove(self.data)
+        Dialog:Dismiss("SPL_REMOVE_BOX")
+      end,
+    },
+    {
+      text = CANCEL,
+      on_click = function(self)
+        Dialog:Dismiss("SPL_REMOVE_BOX")
+      end,
+    },
+  },
+  on_show = function(self)
+    local name = self.data
+  end
+})
 --//直接打印table
 function printTable(t, n)
   if "table" ~= type(t) then
@@ -171,7 +262,7 @@ function remove(key)
       msgInfo('没有找到配置"'..key..'"')
     else
       allList[key] = nil
-      msgInfo('删除配置成功')
+      msgInfo('删除配置 '..key..' 成功')
     end
   end
   initButton(true)
@@ -426,7 +517,6 @@ function initButton(needRefresh)
   end
   
   
-  
   local allList = SupplyBagSavedVariablesPerCharacter.data
   local buttonSN = 0
   if not allList then
@@ -439,19 +529,26 @@ function initButton(needRefresh)
       button:SetSize(30 ,22) -- width, height
       button:SetPoint("LEFT", SPL_BUTTON_Frame, "LEFT", buttonSN*28, 0)
       button:SetText(buttonSN+1)
-      button:SetPoint("CENTER")
       button:SetScript("OnMouseDown", function(self, button)
         local name = self:GetName()
         if button == 'LeftButton' then --左键，加载配置，并清理背包
-          load(name,true)
-        elseif(button == 'RightButton') --右键，只加载配置，不清理背包
+          if IsControlKeyDown() then --按下ctrl键时，触发删除
+            Dialog:Spawn('SPL_REMOVE_BOX',name)
+          else
+            load(name,true)
+          end
+        elseif(button == 'RightButton') then --右键，只加载配置，不清理背包
           load(name)
         end
       end)
       --按钮提示语
       button:SetScript('OnEnter',function(self)
         GameTooltip_SetDefaultAnchor( GameTooltip, UIParent )
-        GameTooltip:SetText( self:GetName() ..'\n左键点击加载并清理背包，右键点击加载配置，ctrl+左键点击删除配置')
+        GameTooltip:SetText('背包配置: '..self:GetName(), 1, 1, 1)
+        GameTooltip:AddLine('左键点击加载并清理背包', 0, 1, 0)
+        GameTooltip:AddLine('右键点击加载配置', 0, 1, 0)
+        GameTooltip:AddLine('ctrl+左键点击删除配置', 0, 1, 0)
+        --GameTooltip:SetText( self:GetName() ..'\n左键点击加载并清理背包，右键点击加载配置，ctrl+左键点击删除配置')
         GameTooltip:Show()
       end)
       button:SetScript('OnLeave',function(self)
@@ -468,7 +565,7 @@ function initButton(needRefresh)
   buttonAdd:SetText('+')
   buttonAdd:SetPoint("CENTER")
   buttonAdd:SetScript("OnClick", function(self)
-    print('add button')
+    Dialog:Spawn('SPL_ADD_BOX')
   end)
   buttonAdd:SetScript('OnEnter',function(self)
     GameTooltip_SetDefaultAnchor( GameTooltip, UIParent )
