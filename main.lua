@@ -477,11 +477,9 @@ function SupplyBag:BANKFRAME_CLOSED()
 end
 
 function showButton()
-  print('show button')
   SPL_BUTTON_Frame:Show()
 end
 function hideButton()
-  print('hide button')
   SPL_BUTTON_Frame:Hide()
 end
 function initButton(needRefresh) 
