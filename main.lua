@@ -2,6 +2,7 @@
 local GS_PLAYER_BAG_COUNT = 5
 local SPL_BUTTON_Frame = CreateFrame("Frame", nil, UIParent)
 local Dialog = LibStub("LibDialog-1.0")
+local DEBUG = false
 
 local function verifyName(name)
 	if not name or name == "" then
@@ -493,23 +494,31 @@ function initButton(needRefresh)
   end
   
   --主框体
-  SPL_BUTTON_Frame = CreateFrame("Frame", nil, UIParent)
+  SPL_BUTTON_Frame = CreateFrame("Frame", 'SPL_BUTTON_Frame', UIParent)
   SPL_BUTTON_Frame:SetWidth(1) -- 设置宽度
   SPL_BUTTON_Frame:SetHeight(1) -- 设置高度
   SPL_BUTTON_Frame:SetBackdropColor(0, 0, 0, 0.6) -- 背景材质颜色 (Red, Green, Black, Alpha) 各参数的范围都是 0-1
   SPL_BUTTON_Frame:SetBackdropBorderColor(0, 0, 0, 1)  -- 边框材质颜色 (Red, Green, Black, Alpha) 各参数的范围都是 0-1
   SPL_BUTTON_Frame:SetPoint("TOPLEFT", BankFrame, "BOTTOMLEFT", 10, 0)
   SPL_BUTTON_Frame:SetBackdrop({
-    bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+    --bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+    --edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
     tile = true,
     tileSize = 2,
     edgeSize = 2,
     insets = { left = 1, right = 1, top = 1, bottom = 1 }
   })
+  --设置框体移动
+  SPL_BUTTON_Frame:SetClampedToScreen(true)
+  SPL_BUTTON_Frame:SetMovable(true)
+  --SPL_BUTTON_Frame:SetUserPlaced(false)  --这个设置成true就不会保存移动后的位置
+  SPL_BUTTON_Frame:EnableMouse(true)
+  SPL_BUTTON_Frame:RegisterForDrag("LeftButton","RightButton")
   
   if not SupplyBag.bankOpened then --银行打开时才显示
-    hideButton()
+    if not DEBUG then --调试模式不隐藏
+      hideButton()
+    end
   else
     showButton()
   end
@@ -543,10 +552,10 @@ function initButton(needRefresh)
       button:SetScript('OnEnter',function(self)
         GameTooltip_SetDefaultAnchor( GameTooltip, UIParent )
         GameTooltip:SetText('背包配置: '..self:GetName(), 1, 1, 1)
-        GameTooltip:AddLine('左键点击加载并清理背包', 0, 1, 0)
-        GameTooltip:AddLine('右键点击加载配置', 0, 1, 0)
-        GameTooltip:AddLine('ctrl+左键点击删除配置', 0, 1, 0)
-        --GameTooltip:SetText( self:GetName() ..'\n左键点击加载并清理背包，右键点击加载配置，ctrl+左键点击删除配置')
+        GameTooltip:AddLine('鼠标左键点击 : 加载并清理背包', 0, 1, 0)
+        GameTooltip:AddLine('鼠标右键点击 : 加载配置', 0, 1, 0)
+        GameTooltip:AddLine('ctrl+鼠标左键点击 : 删除配置', 0, 1, 0)
+        GameTooltip:AddLine('ctrl+鼠标左键点击 : 删除配置', 0, 1, 0)
         GameTooltip:Show()
       end)
       button:SetScript('OnLeave',function(self)
@@ -556,7 +565,8 @@ function initButton(needRefresh)
       buttonSN = buttonSN+1
     end
   end
-  -- 新增按钮
+
+  -- 新增配置的按钮
   local buttonAdd = CreateFrame("Button", 'SPL_BTN_ADD', SPL_BUTTON_Frame, "UIPanelButtonTemplate")
   buttonAdd:SetSize(30 ,22)
   buttonAdd:SetPoint("LEFT", SPL_BUTTON_Frame, "LEFT", buttonSN*28, 0)
@@ -571,6 +581,30 @@ function initButton(needRefresh)
     GameTooltip:Show()
   end)
   buttonAdd:SetScript('OnLeave',function(self)
+    GameTooltip:Hide()
+  end)
+
+  -- 移动按钮
+  local buttonMove = CreateFrame("Button", 'SPL_BTN_MOVE', SPL_BUTTON_Frame)
+  buttonMove:SetClampedToScreen(true)
+  buttonMove:SetSize(20 ,20)
+  buttonMove:SetPoint("LEFT", SPL_BUTTON_Frame, "LEFT", (buttonSN+1)*28, 0)
+  buttonMove:SetHighlightTexture('Interface\\Buttons\\UI-Common-MouseHilight','ADD')
+  buttonMove:SetPoint("CENTER")
+  buttonMove:SetScript("OnMouseDown", function(self,button)
+    if (button == "LeftButton" and IsAltKeyDown() ) then  -- alt+左键移动框体
+      self:GetParent():StartMoving()
+    end
+  end)
+  buttonMove:SetScript("OnMouseUp", function(self)
+    self:GetParent():StopMovingOrSizing()
+  end)
+  buttonMove:SetScript('OnEnter',function(self)
+    GameTooltip_SetDefaultAnchor( GameTooltip, UIParent )
+    GameTooltip:AddLine('Alt+鼠标左键点击 : 移动框体', 0, 1, 0)
+    GameTooltip:Show()
+  end)
+  buttonMove:SetScript('OnLeave',function(self)
     GameTooltip:Hide()
   end)
 
