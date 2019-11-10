@@ -3,7 +3,7 @@
 ## Notes: Supply Bag
 ## SavedVariables: SupplyBagSavedVariables
 ## SavedVariablesPerCharacter: SupplyBagSavedVariablesPerCharacter
-## Version: 0.2
+## Version: 0.3
 ## Author: viktor
 
 main.lua
