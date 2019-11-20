@@ -6,4 +6,5 @@
 ## Version: 0.3
 ## Author: viktor
 
+Libs\Libs.xml
 main.lua
