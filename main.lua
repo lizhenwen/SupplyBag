@@ -342,7 +342,9 @@ function load(key, needMoveToBank)
             local storeItem = storeItems[itemName]
             if (storeItem and storeItem.itemCount>0) then --需要放到背包
               -- 放到背包
-              PickupContainerItem(bankBag, bankBagSlot)
+              --PickupContainerItem(bankBag, bankBagSlot)
+              local pickCount = math.min(itemCount,storeItem.itemCount)
+              SplitContainerItem(bankBag, bankBagSlot,pickCount)
               local emptySlot = bagEmptySlot[1]
               PickupContainerItem(emptySlot[1], emptySlot[2])
               table.remove(bagEmptySlot,1)
@@ -350,7 +352,7 @@ function load(key, needMoveToBank)
               local slot = {bankBag, bankBagSlot}
               --table.insert(bankEmptySlot,slot) -- 标记为空的slot--这种空的还不能标记，东西放不进去
 
-              local count = storeItem.itemCount - itemCount
+              local count = storeItem.itemCount - pickCount
               storeItem.itemCount = count
               if (count<=0) then --如果这个物品都拿完了，就记个数，后面校验是否有缺的物品
                 storeItems[itemName] = nil
